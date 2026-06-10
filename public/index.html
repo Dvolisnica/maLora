@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lora Card Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Lora Card Game</h1>
+  </header>
+
+  <main>
+    <div id="game-container">
+      <div id="top-player" class="player-box"></div>
+      <div id="left-player" class="player-box"></div>
+      <div id="table">
+        <div id="cards-on-table"></div>
+      </div>
+      <div id="right-player" class="player-box"></div>
+      <div id="bottom-player" class="player-box"></div>
+    </div>
+  </main>
+
+  <footer>
+    <button id="choose-game" style="display: none;">Izaberi Igru</button>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

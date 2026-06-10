@@ -1,0 +1,286 @@
+/* Reset osnovnih margina i paddinga */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  background: radial-gradient(circle, #073b4c, #000000);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+}
+
+header {
+  text-align: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  width: 100%;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+/* 🎴 Pozicija igrača oko stola */
+#game-container {
+  position: relative;
+  width: 800px;
+  height: 600px;
+  background: url('https://www.transparenttextures.com/patterns/green-dust-and-scratches.png') center;
+  background-color: #145a32;
+  border-radius: 50%;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 🃏 Centralni deo stola */
+#table {
+  position: absolute;
+  width: 300px;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 🎭 Mesta igrača */
+.player-box {
+  position: absolute;
+  width: 150px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  text-align: center;
+  padding: 10px;
+}
+
+#top-player { top: 20px; left: 50%; transform: translateX(-50%); }
+#bottom-player { bottom: 20px; left: 50%; transform: translateX(-50%); }
+#left-player { left: 20px; top: 50%; transform: translateY(-50%); }
+#right-player { right: 20px; top: 50%; transform: translateY(-50%); }
+
+/* 🃏 Stil karata */
+.card {
+  width: 50px;
+  height: 70px;
+  background-color: white;
+  border: 2px solid black;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 5px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: scale(1.1);
+}
+
+.red-suit {
+  color: red;
+}
+
+.black-suit {
+  color: black;
+}
+
+/* ✨ Animacija za bacanje karata */
+@keyframes throwCard {
+  0% { transform: translateY(100px) rotate(0deg); opacity: 0; }
+  100% { transform: translateY(0px) rotate(5deg); opacity: 1; }
+}
+
+.throw-animation {
+  animation: throwCard 0.5s forwards;
+}
+
+#choose-game {
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  background: #ffcc00;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: 0.2s;
+}
+
+#choose-game:hover {
+  background: #ffaa00;
+}
+
+
+
+header h1 {
+  font-size: 2em;
+  font-weight: normal;
+}
+
+/* Kontejner koji drži "stol" */
+.table-container {
+  width: 90%;
+  max-width: 1000px;
+  margin: 20px auto;
+  background: #116611; /* Zeleno – podsjeća na poker-felt */
+  border: 2px solid #0a0;
+  border-radius: 10px;
+  padding: 20px;
+  min-height: 500px;
+  position: relative; /* VAŽNO za apsolutno pozicioniranje igrača */
+}
+
+/* Polje za informacije (poput poruka o toku igre) */
+#info {
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+
+
+/* OVAJ dio više ne koristimo (ako smo imali #player-hand), jer sada imamo 4 odvojena
+   Ipak, ako želiš, samo ga ukloni ili ostavi neaktivno. */
+
+/* Raspored 4 igrača unutar stola */
+#players-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Svaki igrač -> .player-area */
+.player-area {
+  position: absolute; /* Postavlja se unutar .table-container */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Po želji border ili background radi testiranja
+  border: 1px solid yellow;
+  */
+}
+
+.player-name {
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px black;
+}
+
+/* Sam kontejner za karte tog igrača */
+.player-hand {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  min-height: 80px;
+}
+
+/* Donji igrač (Player 1) */
+#player-bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+
+/* Gornji igrač (Player 2) */
+#player-top {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+}
+
+/* Lijevi igrač (Player 3) */
+#player-left {
+  left: 0;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+/* Desni igrač (Player 4) */
+#player-right {
+  right: 0;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+/* Gumb za start */
+#start-match {
+  display: block;
+  margin: 0 auto;
+  padding: 10px 20px;
+  background-color: #ff9800;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1em;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#start-match:hover {
+  background-color: #e68a00;
+}
+
+
+
+.hearts, .diamonds {
+  color: red;
+}
+.clubs, .spades {
+  color: black;
+}
+
+/* Animacija ako želiš da karta "leti" s vrha do ruke */
+.dealing {
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  animation: dealMove 0.5s forwards;
+}
+.card-back {
+  background: url('path/do/back_slike.png') no-repeat center/cover; 
+  /* ili samo boja: */
+  /* background-color: #0044cc; */
+  /* Ukloni one .card-top, .card-middle, .card-bottom... ili sakrij */
+  position: relative;
+}
+@keyframes dealMove {
+  0% { transform: rotate(-360deg) scale(0.5); }
+  100% { transform: rotate(0deg) scale(1); top: 0; left: 0; }
+}
+
+
+
+/* Mjesto za prikaz ranka i znaka u uglovima */
+.card .card-top,
+.card .card-bottom {
+  font-size: 0.9em;
+  margin: 5px;
+}
+
+/* Glavni simbol (suit) u centru karte */
+.card .card-middle {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+/* Crvena i crna boja ovisno o znaku */
+.card.hearts,
+.card.diamonds {
+  color: red;
+}
+.card.clubs,
+.card.spades {
+  color: black;
+}
