@@ -1,0 +1,53 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        "meta": {
+          ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid || newData.child('hostUid').val() === data.child('hostUid').val())",
+          ".validate": "newData.hasChildren(['hostUid', 'createdAt'])"
+        },
+        "players": {
+          "$seat": {
+            ".write": "auth != null && (newData.child('uid').val() === auth.uid || data.child('uid').val() === auth.uid || root.child('rooms').child($roomId).child('meta/hostUid').val() === auth.uid)"
+          }
+        },
+        "game": {
+          ".write": "auth != null && (root.child('rooms').child($roomId).child('players/0/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/1/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/2/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/3/uid').val() === auth.uid)"
+        },
+        "chat": {
+          "$msgId": {
+            ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid",
+            ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 200"
+          }
+        },
+        "votes": {
+          "$voteType": {
+            "$uid": { ".write": "auth != null && $uid === auth.uid" }
+          }
+        }
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid)",
+        ".validate": "$code.matches(/^[A-Z0-9]{6}$/)"
+      }
+    },
+    "matchmaking": {
+      ".read": "auth != null",
+      "queue": {
+        "$uid": { ".write": "auth != null && $uid === auth.uid" }
+      },
+      "assign": {
+        "$uid": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "presence": {
+      "$uid": { ".read": "auth != null", ".write": "auth != null && $uid === auth.uid" }
+    }
+  }
+}
