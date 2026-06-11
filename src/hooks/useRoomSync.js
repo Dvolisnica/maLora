@@ -21,7 +21,8 @@ export function useRoomSync(roomId) {
       setRoom(room);
       const game = room?.game;
       // Kraj partije → upiši statistike (jednom po finishedAt)
-      if (game?.status === 'gameOver' && user && statsWritten.current !== game.finishedAt) {
+      // Partije s botovima se ne računaju u statistike i ELO
+      if (game?.status === 'gameOver' && !game.hasBots && user && statsWritten.current !== game.finishedAt) {
         statsWritten.current = game.finishedAt;
         const ranking = finalRanking(game);
         updateMyStatsAfterGame(user.uid, game, ranking).then((newAch) => {

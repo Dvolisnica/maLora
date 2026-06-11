@@ -4,8 +4,7 @@
       "$roomId": {
         ".read": "auth != null",
         "meta": {
-          ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid || newData.child('hostUid').val() === data.child('hostUid').val())",
-          ".validate": "newData.hasChildren(['hostUid', 'createdAt'])"
+          ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid || newData.child('hostUid').val() === data.child('hostUid').val())"
         },
         "players": {
           "$seat": {
@@ -13,7 +12,7 @@
           }
         },
         "game": {
-          ".write": "auth != null && (root.child('rooms').child($roomId).child('players/0/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/1/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/2/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/3/uid').val() === auth.uid)"
+          ".write": "auth != null && (root.child('rooms').child($roomId).child('players/0/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/1/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/2/uid').val() === auth.uid || root.child('rooms').child($roomId).child('players/3/uid').val() === auth.uid || root.child('rooms').child($roomId).child('meta/hostUid').val() === auth.uid)"
         },
         "chat": {
           "$msgId": {
@@ -22,9 +21,7 @@
           }
         },
         "votes": {
-          "$voteType": {
-            "$uid": { ".write": "auth != null && $uid === auth.uid" }
-          }
+          ".write": "auth != null"
         }
       }
     },
@@ -41,9 +38,7 @@
         "$uid": { ".write": "auth != null && $uid === auth.uid" }
       },
       "assign": {
-        "$uid": {
-          ".write": "auth != null"
-        }
+        "$uid": { ".write": "auth != null" }
       }
     },
     "presence": {

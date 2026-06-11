@@ -7,9 +7,10 @@ import { useGameStore } from '../store/useGameStore.js';
 import { useRoomSync } from '../hooks/useRoomSync.js';
 import { useTurnTimer } from '../hooks/useTurnTimer.js';
 import { useHaptics } from '../hooks/useHaptics.js';
+import { useBotPlayer } from '../hooks/useBotPlayer.js';
 import {
   submitMove, submitContract, submitContinue, rematch,
-  castVote, clearVotes, closeRoom, leaveRoom,
+  castVote, clearVotes, closeRoom, leaveRoom, cancelSeatOnDisconnect,
 } from '../firebase/rtdb.js';
 import { legalMoves, availableContracts, finalRanking } from '../game/engine.js';
 import { CONTRACTS } from '../game/contracts.js';
@@ -59,6 +60,14 @@ export default function Game() {
   const remaining = useTurnTimer(roomId, game, mySeat, isHost);
   const trickDisplay = useTrickDisplay(game);
 
+  // Host klijent vuče poteze za botove
+  useBotPlayer(roomId, game, isHost);
+
+  // Tokom partije sjedište ostaje i nakon prekida veze (reconnect)
+  useEffect(() => {
+    if (mySeat >= 0) cancelSeatOnDisconnect(roomId, mySeat).catch(() => {});
+  }, [roomId, mySeat]);
+
   // Vibracija kad dođe moj red
   const wasMyTurn = useRef(false);
   useEffect(() => {
@@ -86,15 +95,16 @@ export default function Game() {
     }
   }, [game?.status, game?.dealIndex]);
 
-  // Glasanje: host izvršava ishod
+  // Glasanje: host izvršava ishod (botovi ne glasaju — broje se samo ljudi)
   useEffect(() => {
-    if (!isHost || !room?.votes) return;
+    if (!isHost || !room?.votes || !game) return;
+    const humans = (game.players || []).filter((p) => p && !p.isBot).length || 4;
     const restart = Object.values(room.votes.restart || {});
-    if (restart.length === 4 && restart.every(Boolean)) {
+    if (restart.length >= humans && restart.every(Boolean)) {
       clearVotes(roomId, 'restart').then(() => rematch(roomId, room));
     }
     const leave = Object.values(room.votes.leave || {}).filter(Boolean);
-    if (leave.length >= 3) closeRoom(roomId);
+    if (leave.length >= Math.max(1, Math.ceil(humans * 0.6))) closeRoom(roomId);
   }, [room?.votes]);
 
   // Soba zatvorena / obrisana → nazad
@@ -137,8 +147,8 @@ export default function Game() {
         <button className="btn btn-ghost btn-sm" onClick={() => setShowScore(true)} aria-label="Rezultati">📊</button>
       </header>
 
-      <VoteBanner roomId={roomId} votes={room.votes} type="restart" />
-      <VoteBanner roomId={roomId} votes={room.votes} type="leave" />
+      <VoteBanner roomId={roomId} votes={room.votes} type="restart" total={players.filter((p) => p && !p.isBot).length} />
+      <VoteBanner roomId={roomId} votes={room.votes} type="leave" total={players.filter((p) => p && !p.isBot).length} />
 
       {/* Protivnik preko puta */}
       <div className="row" style={{ justifyContent: 'center' }}>

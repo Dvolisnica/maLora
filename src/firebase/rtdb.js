@@ -1,4 +1,4 @@
-// ─── Realtime Database: sobe, matchmaking, potezi, chat, glasanje ────────────
+// ─── Realtime Database: sobe, matchmaking, potezi, chat, glasanje, botovi ────
 import {
   ref, set, get, update, remove, push, onValue, onDisconnect,
   runTransaction, serverTimestamp,
@@ -6,6 +6,9 @@ import {
 import { rtdb } from './config.js';
 import * as engine from '../game/engine.js';
 import { cleanText } from '../game/profanity.js';
+import { makeBot } from '../game/bots.js';
+
+export const QUEUE_BOT_MS = 120_000; // nakon 2 min čekanja dodaju se botovi
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // bez 0/O/1/I
 const genCode = () =>
@@ -19,6 +22,11 @@ const playerInfo = (user, profile) => ({
   elo: profile?.elo ?? 1000,
 });
 
+const sortQueue = (val) =>
+  Object.entries(val || {})
+    .map(([uid, v]) => ({ uid, ...v }))
+    .sort((a, b) => a.ts - b.ts || a.uid.localeCompare(b.uid));
+
 // ── Sobe ──
 /** Kreiraj privatnu sobu; vraća { roomId, code }. */
 export async function createPrivateRoom(user, profile) {
@@ -30,6 +38,31 @@ export async function createPrivateRoom(user, profile) {
   });
   await set(ref(rtdb, `codes/${code}`), { roomId, hostUid: user.uid });
   return { roomId, code };
+}
+
+/** Soba protiv botova — odmah puna, partija ne ide u statistike. */
+export async function createBotRoom(user, profile) {
+  const roomId = genRoomId();
+  await set(ref(rtdb, `rooms/${roomId}`), {
+    meta: { hostUid: user.uid, createdAt: serverTimestamp(), mode: 'bots', bots: true, status: 'lobby' },
+    players: {
+      0: playerInfo(user, profile),
+      1: makeBot(1, 0),
+      2: makeBot(2, 1),
+      3: makeBot(3, 2),
+    },
+  });
+  return roomId;
+}
+
+/** Host popunjava prazna sjedišta botovima. */
+export async function fillWithBots(roomId, room) {
+  const updates = {};
+  let b = 0;
+  for (let i = 0; i < 4; i++) {
+    if (!room.players?.[i]) updates[`players/${i}`] = makeBot(i, b++);
+  }
+  if (Object.keys(updates).length) await update(ref(rtdb, `rooms/${roomId}`), updates);
 }
 
 /** Uđi u sobu preko 6-znakovnog koda. */
@@ -57,12 +90,11 @@ export async function joinRoom(roomId, user, profile) {
   // Ako igrač izgubi vezu u lobby-ju, oslobodi sjedište
   const mySeat = Object.entries(res.snapshot.val() || {}).find(([, p]) => p?.uid === user.uid)?.[0];
   if (mySeat != null) {
-    const seatRef = ref(rtdb, `rooms/${roomId}/players/${mySeat}`);
-    onDisconnect(seatRef).remove();
+    onDisconnect(ref(rtdb, `rooms/${roomId}/players/${mySeat}`)).remove();
   }
 }
 
-/** Potvrdi prisustvo nakon starta igre (sjedište se više ne briše na disconnect). */
+/** Nakon starta igre sjedište se više ne briše na disconnect (reconnect moguć). */
 export async function cancelSeatOnDisconnect(roomId, seat) {
   await onDisconnect(ref(rtdb, `rooms/${roomId}/players/${seat}`)).cancel();
 }
@@ -80,19 +112,19 @@ export function watchRoom(roomId, cb) {
 }
 
 // ── Start igre i potezi ──
-/** Host pokreće partiju kad su sva 4 igrača u sobi. */
+/** Host pokreće partiju kad su sva 4 sjedišta popunjena. */
 export async function startGame(roomId, room) {
   const players = [0, 1, 2, 3].map((i) => room.players[i]);
   if (players.some((p) => !p)) throw new Error('Nema dovoljno igrača.');
   const game = engine.createGame(players);
   game.isPrivate = room.meta?.mode === 'private';
+  game.hasBots = players.some((p) => p.isBot);
   await update(ref(rtdb, `rooms/${roomId}`), { game, 'meta/status': 'playing', votes: null });
 }
 
 /**
  * Upis poteza kroz RTDB transakciju: engine validira i primjenjuje.
- * Nevalidan potez (ili zastarjelo stanje) se odbija — niko ne može varati
- * više nego što mu validacija na svim klijentima dozvoli.
+ * Nevalidan potez se odbija na svim klijentima.
  */
 export async function submitMove(roomId, seat, move) {
   await runTransaction(ref(rtdb, `rooms/${roomId}/game`), (raw) => {
@@ -146,6 +178,7 @@ export async function rematch(roomId, room) {
   const players = [0, 1, 2, 3].map((i) => room.players[i]);
   const game = engine.createGame(players);
   game.isPrivate = room.meta?.mode === 'private';
+  game.hasBots = players.some((p) => p?.isBot);
   await update(ref(rtdb, `rooms/${roomId}`), { game, 'meta/status': 'playing', votes: null });
 }
 
@@ -173,8 +206,13 @@ export async function clearVotes(roomId, type) {
   await remove(ref(rtdb, `rooms/${roomId}/votes/${type}`));
 }
 
+/** Zatvori sobu (izglasano napuštanje ili kraj). */
+export async function closeRoom(roomId) {
+  await update(ref(rtdb, `rooms/${roomId}/meta`), { status: 'closed' });
+}
+
 // ── Javni matchmaking ──
-/** Stani u red; sistem automatski spaja 4 igrača u sobu. */
+/** Stani u red; sistem spaja 4 igrača, a nakon 2 min dodaje botove. */
 export async function joinQueue(user, profile) {
   const meRef = ref(rtdb, `matchmaking/queue/${user.uid}`);
   await set(meRef, { ...playerInfo(user, profile), ts: Date.now() });
@@ -185,44 +223,55 @@ export async function leaveQueue(user) {
   await remove(ref(rtdb, `matchmaking/queue/${user.uid}`));
 }
 
+async function createQueueRoom(user, bots) {
+  const roomId = genRoomId();
+  await set(ref(rtdb, `rooms/${roomId}`), {
+    meta: { hostUid: user.uid, createdAt: serverTimestamp(), mode: 'public', bots, status: 'lobby' },
+    players: {},
+  });
+  return roomId;
+}
+
+/** Dodijeli sobu članovima reda. Svako sam briše SVOJ queue zapis kad primi dodjelu. */
+async function assignRoom(members, roomId) {
+  for (const p of members) {
+    await set(ref(rtdb, `matchmaking/assign/${p.uid}`), roomId);
+  }
+}
+
 /**
- * Slušaj red čekanja. Najstariji čekalac postaje "organizator": kad su 4 u
- * redu, kreira sobu i svima upiše dodjelu. Svi slušaju matchmaking/assign/$uid.
+ * Slušaj red čekanja. Najstariji čekalac je "organizator": kad su 4 u redu,
+ * kreira sobu i svima upiše dodjelu (matchmaking/assign/$uid).
  */
 export function watchQueue(user, profile, onAssigned) {
   const unsubAssign = onValue(ref(rtdb, `matchmaking/assign/${user.uid}`), async (s) => {
-    if (s.exists()) {
-      const roomId = s.val();
-      await remove(ref(rtdb, `matchmaking/assign/${user.uid}`));
-      await joinRoom(roomId, user, profile);
-      onAssigned(roomId);
-    }
+    if (!s.exists()) return;
+    const roomId = s.val();
+    await remove(ref(rtdb, `matchmaking/assign/${user.uid}`));
+    await leaveQueue(user); // svoj zapis brišem sam (rules dozvoljavaju samo to)
+    await joinRoom(roomId, user, profile);
+    onAssigned(roomId);
   });
 
   const unsubQueue = onValue(ref(rtdb, 'matchmaking/queue'), async (s) => {
-    const q = Object.entries(s.val() || {})
-      .map(([uid, v]) => ({ uid, ...v }))
-      .sort((a, b) => a.ts - b.ts || a.uid.localeCompare(b.uid));
+    const q = sortQueue(s.val());
     if (q.length < 4 || q[0].uid !== user.uid) return; // samo najstariji organizuje
-
-    const four = q.slice(0, 4);
-    const roomId = genRoomId();
-    await set(ref(rtdb, `rooms/${roomId}`), {
-      meta: { hostUid: user.uid, createdAt: serverTimestamp(), mode: 'public', status: 'lobby' },
-      players: {},
-    });
-    const updates = {};
-    for (const p of four) {
-      updates[`matchmaking/assign/${p.uid}`] = roomId;
-      updates[`matchmaking/queue/${p.uid}`] = null;
-    }
-    await update(ref(rtdb), updates);
+    const roomId = await createQueueRoom(user, false);
+    await assignRoom(q.slice(0, 4), roomId);
   });
 
   return () => { unsubAssign(); unsubQueue(); };
 }
 
-/** Zatvori sobu (izglasano napuštanje ili kraj). */
-export async function closeRoom(roomId) {
-  await update(ref(rtdb, `rooms/${roomId}/meta`), { status: 'closed' });
+/**
+ * Isteklo je čekanje (2 min): najstariji u redu kreira sobu za sve prisutne,
+ * a Lobby prazna mjesta popuni botovima. Vraća true ako je soba kreirana.
+ */
+export async function forceBotMatch(user) {
+  const s = await get(ref(rtdb, 'matchmaking/queue'));
+  const q = sortQueue(s.val());
+  if (!q.length || q[0].uid !== user.uid) return false; // nisam najstariji — čekam dodjelu
+  const roomId = await createQueueRoom(user, true);
+  await assignRoom(q.slice(0, 4), roomId);
+  return true;
 }

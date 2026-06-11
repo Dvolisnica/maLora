@@ -1,4 +1,4 @@
-// ─── Lobby: čekanje igrača, kod sobe, countdown ─────────────────────────────
+// ─── Lobby: čekanje igrača, kod sobe, countdown, bot-popuna ────────────────
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/useAuthStore.js';
 import { useGameStore } from '../store/useGameStore.js';
 import { useUIStore } from '../store/useUIStore.js';
 import { useRoomSync } from '../hooks/useRoomSync.js';
-import { startGame, leaveRoom } from '../firebase/rtdb.js';
+import { startGame, leaveRoom, fillWithBots } from '../firebase/rtdb.js';
 
 const COUNTDOWN = 5;
 
@@ -31,6 +31,13 @@ export default function Lobby() {
     if (room === null) { reset(); nav('/'); } // soba obrisana
   }, [room?.meta?.status, room]);
 
+  // Soba kreirana zbog isteka reda (meta.bots): host popuni prazna mjesta botovima
+  useEffect(() => {
+    if (!room?.meta?.bots || !isHost || full) return;
+    const t = setTimeout(() => fillWithBots(roomId, room).catch(() => {}), 6000);
+    return () => clearTimeout(t);
+  }, [room?.meta?.bots, isHost, full, filled.length]);
+
   // Countdown kad su svi tu; host pokreće igru
   useEffect(() => {
     if (!full) { setCount(null); return; }
@@ -40,7 +47,9 @@ export default function Lobby() {
   }, [full]);
 
   useEffect(() => {
-    if (count === 0 && isHost && full) startGame(roomId, room).catch((e) => addToast({ title: 'Greška', body: e.message }));
+    if (count === 0 && isHost && full) {
+      startGame(roomId, room).catch((e) => addToast({ title: 'Greška pri pokretanju', body: e.message }));
+    }
   }, [count]);
 
   const leave = async () => {
@@ -83,12 +92,20 @@ export default function Lobby() {
                   </span>
                 </>
               ) : (
-                <span className="muted" style={{ fontSize: 14 }}>⏳ Čeka se igrač…</span>
+                <span className="muted" style={{ fontSize: 14 }}>
+                  {room?.meta?.bots ? '🤖 Bot uskače…' : '⏳ Čeka se igrač…'}
+                </span>
               )}
             </motion.div>
           );
         })}
       </div>
+
+      {room?.meta?.bots && (
+        <p className="muted" style={{ textAlign: 'center', fontSize: 13, margin: 0 }}>
+          Partija s botovima — ne računa se u statistike i ELO.
+        </p>
+      )}
 
       <div style={{ textAlign: 'center', marginTop: 'auto' }} aria-live="polite">
         {full ? (
