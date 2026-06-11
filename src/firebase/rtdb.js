@@ -40,17 +40,19 @@ export async function createPrivateRoom(user, profile) {
   return { roomId, code };
 }
 
-/** Soba protiv botova — odmah puna, partija ne ide u statistike. */
+/** Soba protiv botova — odmah puna, partija ne ide u statistike.
+ *  Dva upisa: botove smije upisati samo host, a host postoji u bazi
+ *  tek nakon prvog upisa (security rules čitaju postojeće stanje). */
 export async function createBotRoom(user, profile) {
   const roomId = genRoomId();
   await set(ref(rtdb, `rooms/${roomId}`), {
     meta: { hostUid: user.uid, createdAt: serverTimestamp(), mode: 'bots', bots: true, status: 'lobby' },
-    players: {
-      0: playerInfo(user, profile),
-      1: makeBot(1, 0),
-      2: makeBot(2, 1),
-      3: makeBot(3, 2),
-    },
+    players: { 0: playerInfo(user, profile) },
+  });
+  await update(ref(rtdb, `rooms/${roomId}`), {
+    'players/1': makeBot(1, 0),
+    'players/2': makeBot(2, 1),
+    'players/3': makeBot(3, 2),
   });
   return roomId;
 }
