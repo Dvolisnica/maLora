@@ -13,7 +13,7 @@ export default function ScoreBoard({ game, onClose }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', padding: 6 }}>Kontrat</th>
+              <th style={{ textAlign: 'left', padding: 6 }}>Igra</th>
               {players.map((p, i) => (
                 <th key={i} style={{ padding: 6, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name.split(' ')[0]}</th>
               ))}

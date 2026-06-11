@@ -4,7 +4,7 @@ import { normalize } from '../game/engine.js';
 
 export const useGameStore = create((set, get) => ({
   roomId: null,
-  room: undefined,
+  room: undefined, // undefined = još se učitava; null = soba ne postoji/obrisana
   game: null,        // normalizovano stanje engine-a
   chat: [],
   chatOpen: false,

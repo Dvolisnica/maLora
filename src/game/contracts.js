@@ -1,6 +1,8 @@
 // ─── 7 kontrata tradicionalne Lore ──────────────────────────────────────────
 // Lora je igra IZBJEGAVANJA bodova: pobjeđuje igrač s NAJMANJE bodova
-// nakon 28 dijeljenja (svaki od 4 igrača bira svaki kontrat tačno jednom).
+// nakon 28 dijeljenja. Špil 32 karte (7–A), 8 karata po igraču.
+// Dijeli se PRIJE biranja: diler pogleda svoje karte pa bira jednu od
+// svojih još neodigranih igara — biranje ide u krug, svako svih 7.
 
 import { suitOf, rankOf } from './deck.js';
 
@@ -9,9 +11,9 @@ export const CONTRACT_ORDER = [
 ];
 
 export const CONTRACTS = {
-  STIHOVI:  { name: 'Štihovi',     icon: '🂠', desc: 'Svaki uzeti štih +1 bod (ukupno 13).' },
-  HERCEVI:  { name: 'Herčevi',     icon: '♥',  desc: 'Svaki uzeti herc +1 bod (ukupno 13).' },
-  DAME:     { name: 'Dame',        icon: '♛',  desc: 'Svaka uzeta dama +2 boda (ukupno 8).' },
+  STIHOVI:  { name: 'Štihovi',     icon: '🂠', desc: 'Svaki uzeti štih +1 bod (ukupno 8).' },
+  HERCEVI:  { name: 'Herčevi',     icon: '♥',  desc: 'Svaki uzeti herc +1 bod (ukupno 8).' },
+  DAME:     { name: 'Dame',        icon: '♛',  desc: 'Svaka uzeta dama +2 boda (4 dame, ukupno 8).' },
   KRALJ:    { name: 'Kralj herc',  icon: '♚',  desc: 'Ko uzme kralja herc dobiva +8 bodova.' },
   ZADNJA2:  { name: 'Zadnja dva',  icon: '⏱',  desc: 'Pretposljednji i posljednji štih po +4 boda.' },
   MAKSIMUM: { name: 'Maksimum',    icon: 'Σ',  desc: 'Sve zajedno: štih +1, herc +1, dama +2, K♥ +8, zadnja dva +4.' },

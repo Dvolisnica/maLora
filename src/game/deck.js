@@ -1,6 +1,6 @@
 // ─── Špil od 52 karte ───────────────────────────────────────────────────────
 // Karta je string ID: npr. "H12" = dama herc (suit + rank).
-// Rank: 2–10, 11=J (dečko), 12=Q (dama), 13=K (kralj), 14=A (as).
+// Špil 32 karte: rank 7–10, 11=J (dečko), 12=Q (dama), 13=K (kralj), 14=A (as).
 
 export const SUITS = ['S', 'H', 'D', 'C']; // pik, herc, karo, tref
 export const SUIT_INFO = {
@@ -9,7 +9,7 @@ export const SUIT_INFO = {
   D: { symbol: '♦', name: 'Karo', color: 'red' },
   C: { symbol: '♣', name: 'Tref', color: 'black' },
 };
-export const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+export const RANKS = [7, 8, 9, 10, 11, 12, 13, 14];
 export const RANK_LABEL = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 
 export const cardId = (s, r) => s + r;
@@ -17,7 +17,7 @@ export const suitOf = (id) => id[0];
 export const rankOf = (id) => Number(id.slice(1));
 export const rankLabel = (r) => RANK_LABEL[r] || String(r);
 
-/** Puni špil od 52 karte. */
+/** Špil od 32 karte (7 do A). */
 export function buildDeck() {
   const deck = [];
   for (const s of SUITS) for (const r of RANKS) deck.push(cardId(s, r));
@@ -34,7 +34,7 @@ export function shuffle(deck, rng = Math.random) {
   return a;
 }
 
-/** Podijeli 4 ruke po 13 karata, sortirane za prikaz. */
+/** Podijeli 4 ruke po 8 karata, sortirane za prikaz. */
 export function dealHands(rng = Math.random) {
   const deck = shuffle(buildDeck(), rng);
   const hands = [[], [], [], []];
@@ -51,5 +51,5 @@ export function sortHand(hand) {
   });
 }
 
-/** Sljedeći rank u Lora nizu (kružno: A → 2). */
-export const nextRank = (r) => (r === 14 ? 2 : r + 1);
+/** Sljedeći rank u Lora nizu (kružno: A → 7). */
+export const nextRank = (r) => (r === 14 ? 7 : r + 1);

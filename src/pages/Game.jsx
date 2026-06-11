@@ -147,6 +147,13 @@ export default function Game() {
         <button className="btn btn-ghost btn-sm" onClick={() => setShowScore(true)} aria-label="Rezultati">📊</button>
       </header>
 
+      {/* Info: koja se igra trenutno igra */}
+      {contract && game.status !== 'gameOver' && (
+        <div className="muted" style={{ textAlign: 'center', fontSize: 11.5, padding: '0 12px' }} aria-live="polite">
+          {contract.icon} {contract.name} — {contract.desc}
+        </div>
+      )}
+
       <VoteBanner roomId={roomId} votes={room.votes} type="restart" total={players.filter((p) => p && !p.isBot).length} />
       <VoteBanner roomId={roomId} votes={room.votes} type="leave" total={players.filter((p) => p && !p.isBot).length} />
 
@@ -161,7 +168,7 @@ export default function Game() {
         <div className="table-felt" style={{ flex: 1, minHeight: 190, display: 'grid', placeItems: 'center', margin: '0 4px' }}>
           {game.status === 'choosing' && mySeat !== game.dealerSeat && (
             <p className="muted" style={{ textAlign: 'center', padding: 12 }} aria-live="polite">
-              <strong>{players[game.dealerSeat]?.name}</strong> bira kontrat… ({remaining}s)
+              <strong>{players[game.dealerSeat]?.name}</strong> gleda karte i bira igru… ({remaining}s)
             </p>
           )}
           {game.contract === 'LORA' && game.status === 'playing' && <LoraBoard lora={game.lora} />}

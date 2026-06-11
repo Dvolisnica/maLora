@@ -10,6 +10,7 @@ import { CONTRACT_ORDER, scoreTrickDeal, scoreLoraDeal } from './contracts.js';
 
 export const TURN_MS = 30_000; // 30 sekundi po potezu
 export const TOTAL_DEALS = 28;
+export const TRICKS_PER_DEAL = 8; // 32 karte / 4 igrača
 
 // RTDB briše null/prazne vrijednosti — normalize() vraća kompletno stanje.
 export function normalize(g) {
@@ -36,13 +37,15 @@ export function normalize(g) {
   };
 }
 
-/** Nova igra: status 'choosing' — prvi diler bira kontrat. */
-export function createGame(players) {
+/** Nova igra: karte se odmah dijele, pa diler gleda svoju ruku i bira igru. */
+export function createGame(players, rng = Math.random) {
+  const hands = dealHands(rng);
   return {
     status: 'choosing',
     dealIndex: 0,
     dealerSeat: 0,
     players, // [{uid, name, photo}] po sjedištima 0–3
+    hands: { 0: hands[0], 1: hands[1], 2: hands[2], 3: hands[3] },
     scores: { 0: 0, 1: 0, 2: 0, 3: 0 },
     used: { 0: {}, 1: {}, 2: {}, 3: {} },
     history: [],
@@ -57,17 +60,15 @@ export function availableContracts(g) {
   return CONTRACT_ORDER.filter((c) => !used[c]);
 }
 
-/** Diler bira kontrat → dijele se karte i kreće igra. */
-export function chooseContract(g, seat, contract, rng = Math.random) {
+/** Diler je pogledao svoje karte i bira igru → kreće igranje. */
+export function chooseContract(g, seat, contract) {
   if (g.status !== 'choosing') throw new Error('Nije faza biranja.');
-  if (seat !== g.dealerSeat) throw new Error('Samo diler bira kontrat.');
-  if (!availableContracts(g).includes(contract)) throw new Error('Kontrat je već odigran.');
+  if (seat !== g.dealerSeat) throw new Error('Samo diler bira igru.');
+  if (!availableContracts(g).includes(contract)) throw new Error('Ta igra je već odigrana.');
 
-  const hands = dealHands(rng);
   const first = (g.dealerSeat + 1) % 4; // prvi igra desno od dilera (smjer kazaljke)
   const next = { ...g, status: 'playing', contract, trickNo: 0 };
 
-  next.hands = { 0: hands[0], 1: hands[1], 2: hands[2], 3: hands[3] };
   next.used = { ...g.used, [seat]: { ...(g.used[seat] || {}), [contract]: true } };
   next.taken = { 0: [], 1: [], 2: [], 3: [] };
   next.tricks = { 0: 0, 1: 0, 2: 0, 3: 0 };
@@ -143,11 +144,11 @@ function applyTrickMove(g, seat, card) {
   next.taken[winner] = [...next.taken[winner], ...Object.values(next.trick.cards)];
   next.tricks[winner] = (next.tricks[winner] || 0) + 1;
   next.tricksTotal[winner] = (next.tricksTotal[winner] || 0) + 1;
-  if (next.trickNo >= 11) next.lastTwo = [...next.lastTwo, winner]; // 12. i 13. štih
+  if (next.trickNo >= TRICKS_PER_DEAL - 2) next.lastTwo = [...next.lastTwo, winner]; // 7. i 8. štih
   next.lastTrickWinner = winner;
   next.trickNo += 1;
 
-  if (next.trickNo === 13) return finishDeal(next, scoreTrickDealArr(next));
+  if (next.trickNo === TRICKS_PER_DEAL) return finishDeal(next, scoreTrickDealArr(next));
 
   next.trick = { lead: winner, cards: {} };
   next.turnSeat = winner;
@@ -183,7 +184,7 @@ function applyLoraMove(g, seat, move) {
     for (const suit of SUITS) next.lora.next[suit] = r;
   }
   next.lora.played[s] = [...(next.lora.played[s] || []), r];
-  next.lora.next[s] = next.lora.played[s].length === 13 ? 'DONE' : nextRank(r);
+  next.lora.next[s] = next.lora.played[s].length === 8 ? 'DONE' : nextRank(r);
 
   if (next.hands[seat].length === 0) {
     // Prvi bez karata → kraj dijeljenja
@@ -220,10 +221,16 @@ function finishDeal(g, pts) {
   return next;
 }
 
-/** Nastavi na sljedeće dijeljenje nakon pauze s rezultatima. */
-export function continueToNextDeal(g) {
+/** Nastavi na sljedeće dijeljenje: podijeli karte, novi diler bira igru. */
+export function continueToNextDeal(g, rng = Math.random) {
   if (g.status !== 'dealOver') throw new Error('Dijeljenje nije završeno.');
-  return { ...g, status: 'choosing', turnDeadline: Date.now() + TURN_MS };
+  const hands = dealHands(rng);
+  return {
+    ...g,
+    status: 'choosing',
+    hands: { 0: hands[0], 1: hands[1], 2: hands[2], 3: hands[3] },
+    turnDeadline: Date.now() + TURN_MS,
+  };
 }
 
 /** Redoslijed na kraju: rastuće po bodovima (najmanje = pobjednik). */

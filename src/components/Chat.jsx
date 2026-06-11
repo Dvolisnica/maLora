@@ -31,6 +31,10 @@ export default function Chat({ roomId }) {
       <AnimatePresence>
         {chatOpen && (
           <motion.div className="card-panel chat-panel" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}>
+            <div className="row spread" style={{ marginBottom: 4 }}>
+              <strong style={{ fontSize: 13.5 }}>💬 Chat</strong>
+              <button className="btn btn-ghost btn-sm" onClick={toggleChat} aria-label="Sakrij chat" style={{ padding: '2px 8px' }}>✕</button>
+            </div>
             <div className="chat-msgs" role="log" aria-live="polite">
               {chat.length === 0 && <p className="muted" style={{ fontSize: 13 }}>Pozdravi ekipu! 👋</p>}
               {chat.slice(-60).map((m) => (
