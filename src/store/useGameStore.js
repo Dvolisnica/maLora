@@ -4,7 +4,7 @@ import { normalize } from '../game/engine.js';
 
 export const useGameStore = create((set, get) => ({
   roomId: null,
-  room: null,
+  room: undefined,
   game: null,        // normalizovano stanje engine-a
   chat: [],
   chatOpen: false,
@@ -24,7 +24,7 @@ export const useGameStore = create((set, get) => ({
     })),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, unread: 0 })),
   selectCard: (card) => set({ selectedCard: card }),
-  reset: () => set({ roomId: null, room: null, game: null, chat: [], unread: 0, selectedCard: null }),
+  reset: () => set({ roomId: null, room: undefined, game: null, chat: [], unread: 0, selectedCard: null }),
 
   /** Moje sjedište u trenutnoj sobi (ili -1). */
   mySeat: (uid) => {
